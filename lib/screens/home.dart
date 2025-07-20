@@ -1,8 +1,7 @@
 import 'dart:ui';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:photography/screens/FullScreenImage.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart'; // Add this
 
@@ -35,30 +34,28 @@ class _HomePageState extends State<HomePage> {
     fetchImages();
   }
 
+  List<String> getWebImagePaths(int count) {
+    return List.generate(
+      count,
+      (index) => 'images/image${index + 1}.jpg',
+    );
+  }
+
   Future<void> fetchImages() async {
     try {
-      final response =
-          await http.get(Uri.parse('http://127.0.0.1:5000/photos'));
+      final List<String> imagePaths = getWebImagePaths(43)..shuffle(); // Number of images
+      
+      setState(() {
+        photos = imagePaths.map<Photo>((url) {
+          return Photo(
+            url: url, // Web-accessible path
+            aspectRatio: 1.0,
+          );
+        }).toList();
 
-      if (response.statusCode == 200) {
-        final List<dynamic> jsonData = jsonDecode(response.body);
-        setState(() {
-          photos = jsonData.map<Photo>((data) {
-            // Default aspect ratio to 1.0 since no metadata
-            return Photo(
-              url: 'http://127.0.0.1:5000${data['url']}',
-              aspectRatio: 1.0,
-            );
-          }).toList();
-          isLoading = false;
-          imagesLoaded = 0; // Reset imagesLoaded
-        });
-      } else {
-        setState(() {
-          error = 'Error: ${response.statusCode}';
-          isLoading = false;
-        });
-      }
+        isLoading = false;
+        imagesLoaded = 0;
+      });
     } catch (e) {
       setState(() {
         error = 'Exception: $e';
@@ -66,6 +63,7 @@ class _HomePageState extends State<HomePage> {
       });
     }
   }
+
 
   void _showFullScreenImage(BuildContext context, int index) {
     Navigator.push(
@@ -88,7 +86,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    
     if (isLoading) {
       return const Scaffold(
         body: Center(
@@ -111,23 +108,52 @@ class _HomePageState extends State<HomePage> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.black.withAlpha(1000),
-
+      backgroundColor: const Color.fromRGBO(0, 0, 0, 1).withAlpha(1000),
       appBar: AppBar(
         title: const Text("Shashvat Garg's PHOTOGRAPHY",
             style: TextStyle(letterSpacing: 2.0, fontWeight: FontWeight.w300)),
+        
         centerTitle: true,
         backgroundColor: Colors.black.withAlpha(1000),
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: () {
+              setState(() {
+                isLoading = true;
+                error = '';
+                fetchImages();
+              });
+            },
+          ),
+          // Gallery button
+          IconButton(
+            icon: const Icon(Icons.photo_album_outlined, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => FullScreenImage(
+                    photos: photos,
+                    index: 0,
+                    total: photos.length,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+         
       ),
-
+      
       body: MasonryGridView.count(
         padding: const EdgeInsets.all(10),
         crossAxisCount: 6,
         mainAxisSpacing: 10.0,
         crossAxisSpacing: 10.0,
         itemCount: photos.length,
-        cacheExtent: 3000, // Cache extent for better performance
+        cacheExtent: 5000, // Cache extent for better performance
         physics: const BouncingScrollPhysics(),
         itemBuilder: (context, index) {
           final photo = photos[index];
@@ -137,7 +163,6 @@ class _HomePageState extends State<HomePage> {
           );
         },
       ),
-    
     );
   }
 }
