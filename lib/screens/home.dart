@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
@@ -26,13 +27,17 @@ class _HomePageState extends State<HomePage> {
   List<Photo> photos = [];
   bool isLoading = true;
   String error = '';
-  int imagesLoaded = 0; // Track the number of images loaded
+  int imagesLoaded = 0;
+  static const String backend = "https://abcd-1234.ngrok.io";
+  
+  get http => null; // Track the number of images loaded
 
   @override
   void initState() {
     super.initState();
     fetchImages();
   }
+
 
   List<String> getWebImagePaths(int count) {
     return List.generate(
@@ -63,6 +68,26 @@ class _HomePageState extends State<HomePage> {
       });
     }
   }
+
+  Future<void> fetchImages1() async {
+  try {
+    final resp = await http.get(Uri.parse("$backend/photos"));
+    if (resp.statusCode != 200) throw Exception("HTTP ${resp.statusCode}");
+    final data = jsonDecode(resp.body);
+    final List<String> urls = List<String>.from(data["photos"])..shuffle();
+
+    setState(() {
+      photos = urls.map((u) => Photo(url: u, aspectRatio: 1.0)).toList();
+      isLoading = false;
+      imagesLoaded = 0;
+    });
+  } catch (e) {
+    setState(() {
+      error = 'Exception: $e';
+      isLoading = false;
+    });
+  }
+}
 
 
   void _showFullScreenImage(BuildContext context, int index) {
@@ -123,7 +148,7 @@ class _HomePageState extends State<HomePage> {
               setState(() {
                 isLoading = true;
                 error = '';
-                fetchImages();
+                fetchImages1();
               });
             },
           ),
